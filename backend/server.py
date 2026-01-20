@@ -120,16 +120,48 @@ class Item(BaseModel):
     tenant_id: str
     name: str
     price: int
+    # Stock fields (Phase 4)
+    track_stock: bool = False  # Whether to track stock for this item
+    stock: int = 0  # Current stock quantity
+    low_stock_threshold: int = 10  # Alert when stock below this
     is_active: bool = True
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class ItemCreate(BaseModel):
     name: str
     price: int
+    track_stock: bool = False
+    stock: int = 0
+    low_stock_threshold: int = 10
 
 class ItemUpdate(BaseModel):
     name: Optional[str] = None
     price: Optional[int] = None
+    track_stock: Optional[bool] = None
+    stock: Optional[int] = None
+    low_stock_threshold: Optional[int] = None
+
+# Stock Adjustment Models (Phase 4)
+class StockAdjustment(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
+    tenant_id: str
+    item_id: str
+    item_name: str
+    adjustment_type: str  # add, subtract, set, sale, void_return
+    quantity: int
+    stock_before: int
+    stock_after: int
+    reason: Optional[str] = None
+    transaction_id: Optional[str] = None
+    created_by: str
+    created_by_name: str
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class StockAdjustmentRequest(BaseModel):
+    adjustment_type: str  # add, subtract, set
+    quantity: int
+    reason: Optional[str] = None
 
 # Transaction Models
 class TransactionItem(BaseModel):
