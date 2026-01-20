@@ -51,8 +51,8 @@ export const changePassword = (newPassword) =>
 export const getItems = (activeOnly = true, search = '') =>
   api.get('/items', { params: { active_only: activeOnly, search } });
 
-export const createItem = (name, price) =>
-  api.post('/items', { name, price });
+export const createItem = (name, price, trackStock = false, stock = 0, lowStockThreshold = 10) =>
+  api.post('/items', { name, price, track_stock: trackStock, stock, low_stock_threshold: lowStockThreshold });
 
 export const updateItem = (id, data) =>
   api.put(`/items/${id}`, data);
