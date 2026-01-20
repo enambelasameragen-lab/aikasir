@@ -840,6 +840,40 @@ async def void_transaction(
     if transaction.get("status") == "void":
         raise HTTPException(status_code=400, detail="Transaksi sudah dibatalkan")
     
+    # Return stock for voided items
+    for trans_item in transaction.get("items", []):
+        item = await db.items.find_one({
+            "id": trans_item["item_id"],
+            "tenant_id": current_user["tenant_id"]
+        })
+        
+        if item and item.get("track_stock", False):
+            current_stock = item.get("stock", 0)
+            new_stock = current_stock + trans_item["qty"]
+            
+            await db.items.update_one(
+                {"id": trans_item["item_id"]},
+                {"$set": {"stock": new_stock}}
+            )
+            
+            # Create stock adjustment for void return
+            stock_adj = StockAdjustment(
+                tenant_id=current_user["tenant_id"],
+                item_id=trans_item["item_id"],
+                item_name=trans_item["name"],
+                adjustment_type="void_return",
+                quantity=trans_item["qty"],
+                stock_before=current_stock,
+                stock_after=new_stock,
+                reason=f"Pembatalan #{transaction['transaction_number']}: {data.reason}",
+                transaction_id=transaction_id,
+                created_by=current_user["id"],
+                created_by_name=current_user["name"]
+            )
+            stock_adj_dict = stock_adj.model_dump()
+            stock_adj_dict["created_at"] = stock_adj_dict["created_at"].isoformat()
+            await db.stock_adjustments.insert_one(stock_adj_dict)
+    
     # Update transaction status
     await db.transactions.update_one(
         {"id": transaction_id},
