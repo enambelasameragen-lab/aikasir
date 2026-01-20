@@ -322,6 +322,128 @@ class AIKasirTester:
             data
         )
 
+    def test_user_management_owner(self):
+        """Test User Management APIs (Owner access)"""
+        print("\n👥 Testing User Management (Owner)...")
+        
+        if not self.token:
+            return self.log_test("User Management", False, "No token available")
+        
+        # Test GET users (owner only)
+        success, data = self.make_request('GET', '/v1/users')
+        if not self.log_test(
+            "Get Users List (Owner)", 
+            success and 'users' in data, 
+            f"Found {len(data.get('users', []))} users" if success else f"Error: {data}",
+            data
+        ):
+            return False
+        
+        # Test invite user
+        invite_data = {
+            "name": "Test Kasir",
+            "email": f"testkasir{datetime.now().strftime('%H%M%S')}@test.com",
+            "role": "kasir"
+        }
+        
+        success, data = self.make_request('POST', '/v1/users/invite', invite_data, expected_status=201)
+        if not success:
+            return self.log_test("Invite User", False, f"Error: {data}", data)
+        
+        invite_token = data.get('invite_token')
+        self.log_test(
+            "Invite User", 
+            success and invite_token, 
+            f"Invited: {invite_data['name']} ({invite_data['email']})",
+            data
+        )
+        
+        if not invite_token:
+            return False
+        
+        # Test get invite info
+        success, data = self.make_request('GET', f'/v1/users/invite/{invite_token}')
+        self.log_test(
+            "Get Invite Info", 
+            success and 'name' in data, 
+            f"Invite for: {data.get('name', 'Unknown')} at {data.get('tenant_name', 'Unknown')}" if success else f"Error: {data}",
+            data
+        )
+        
+        # Test accept invite
+        accept_data = {
+            "token": invite_token,
+            "password": "testpass123"
+        }
+        
+        success, data = self.make_request('POST', '/v1/users/accept-invite', accept_data)
+        return self.log_test(
+            "Accept Invite", 
+            success and 'token' in data, 
+            f"Account activated for: {data.get('user', {}).get('name', 'Unknown')}" if success else f"Error: {data}",
+            data
+        )
+
+    def test_user_management_kasir(self):
+        """Test User Management APIs with Kasir credentials (should fail)"""
+        print("\n🚫 Testing User Management (Kasir - Should Fail)...")
+        
+        # Login as kasir
+        kasir_payload = {
+            "email": "dedi@test.com",
+            "password": "kasir123"
+        }
+        
+        success, data = self.make_request('POST', '/v1/auth/login', kasir_payload)
+        if not success:
+            return self.log_test("Kasir Login", False, f"Cannot test kasir restrictions - login failed: {data}")
+        
+        # Store original token
+        original_token = self.token
+        kasir_token = data.get('token')
+        self.token = kasir_token
+        
+        # Test GET users (should fail with 403)
+        success, data = self.make_request('GET', '/v1/users', expected_status=403)
+        kasir_blocked = not success and data.get('detail') and '403' in str(data)
+        
+        self.log_test(
+            "Kasir Access to Users API (Should Fail)", 
+            kasir_blocked, 
+            f"Correctly blocked: {data.get('detail', 'Access denied')}" if kasir_blocked else f"ERROR: Kasir got access: {data}",
+            data
+        )
+        
+        # Restore original token
+        self.token = original_token
+        return kasir_blocked
+
+    def test_subdomain_check(self):
+        """Test Subdomain Check API"""
+        print("\n🌐 Testing Subdomain Check...")
+        
+        # Test existing subdomain
+        success, data = self.make_request('GET', '/v1/tenant/check/kopibangjago')
+        existing_check = self.log_test(
+            "Check Existing Subdomain", 
+            success and data.get('exists') == True, 
+            f"Found tenant: {data.get('tenant', {}).get('name', 'Unknown')}" if success else f"Error: {data}",
+            data
+        )
+        
+        # Test non-existing subdomain
+        success, data = self.make_request('GET', '/v1/tenant/check/nonexistentsubdomain', expected_status=404)
+        nonexistent_check = not success and data.get('detail')
+        
+        self.log_test(
+            "Check Non-existing Subdomain", 
+            nonexistent_check, 
+            f"Correctly returned 404: {data.get('detail', 'Not found')}" if nonexistent_check else f"ERROR: Found non-existent subdomain: {data}",
+            data
+        )
+        
+        return existing_check and nonexistent_check
+
     def run_all_tests(self):
         """Run all tests in sequence"""
         print("🚀 Starting AIKasir Backend API Tests")
