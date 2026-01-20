@@ -1,349 +1,281 @@
-# 📁 STRUKTUR FOLDER & FILE
+# 📁 STRUKTUR FOLDER & FILE - AIKasir
 
-## Overview Struktur Project
+## Struktur Aktual Project
 
 ```
 /app
-├── memory/
-│   └── PRD.md                    # Product Requirements Document
+├── memory/                       # Dokumentasi project
+│   ├── PRD.md                    # Product Requirements Document
+│   ├── STRUCTURE.md              # Dokumen ini - struktur folder
+│   ├── API.md                    # API Documentation lengkap
+│   ├── PROGRESS.md               # Progress tracker per phase
+│   └── TESTING.md                # Testing documentation
 │
 ├── backend/
-│   ├── server.py                 # Main FastAPI application
+│   ├── server.py                 # ⭐ MAIN: Semua backend logic dalam 1 file
 │   ├── requirements.txt          # Python dependencies
 │   ├── .env                      # Environment variables
-│   │
-│   ├── config/
-│   │   └── database.py           # MongoDB connection
-│   │
-│   ├── models/
-│   │   ├── __init__.py
-│   │   ├── tenant.py             # Tenant/Toko model
-│   │   ├── user.py               # User model
-│   │   ├── item.py               # Barang model
-│   │   └── transaction.py        # Transaksi model
-│   │
-│   ├── routes/
-│   │   ├── __init__.py
-│   │   ├── ai.py                 # AI onboarding endpoints
-│   │   ├── auth.py               # Authentication endpoints
-│   │   ├── items.py              # Items CRUD endpoints
-│   │   ├── transactions.py       # Transactions endpoints
-│   │   └── dashboard.py          # Dashboard/ringkasan endpoints
-│   │
-│   ├── services/
-│   │   ├── __init__.py
-│   │   ├── ai_service.py         # OpenAI integration
-│   │   └── auth_service.py       # JWT & password handling
-│   │
-│   └── utils/
-│       ├── __init__.py
-│       └── helpers.py            # Utility functions
+│   └── tests/                    # Test files (pytest)
+│       └── test_phase*.py        # Test per phase
 │
 ├── frontend/
-│   ├── package.json
-│   ├── tailwind.config.js
-│   ├── .env
+│   ├── package.json              # Node dependencies
+│   ├── tailwind.config.js        # Tailwind CSS config
+│   ├── .env                      # Frontend env (REACT_APP_BACKEND_URL)
 │   │
 │   ├── public/
 │   │   └── index.html
 │   │
 │   └── src/
 │       ├── index.js              # Entry point
-│       ├── index.css             # Global styles
-│       ├── App.js                # Main App component
-│       ├── App.css               # App styles
+│       ├── index.css             # Global + Tailwind styles
+│       ├── App.js                # ⭐ Main router dengan protected routes
+│       ├── App.css
 │       │
 │       ├── api/
-│       │   └── index.js          # API client & endpoints
+│       │   └── index.js          # ⭐ API client - semua endpoint functions
 │       │
 │       ├── contexts/
-│       │   ├── AuthContext.js    # Authentication state
+│       │   ├── AuthContext.js    # Auth state (user, tenant, token)
 │       │   └── CartContext.js    # Shopping cart state
 │       │
-│       ├── pages/
+│       ├── pages/                # Halaman utama
 │       │   ├── OnboardingPage.js # AI chat onboarding
 │       │   ├── LoginPage.js      # Login screen
 │       │   ├── POSPage.js        # Main POS/kasir screen
-│       │   ├── ItemsPage.js      # Manage items
-│       │   ├── HistoryPage.js    # Transaction history
-│       │   └── DashboardPage.js  # Daily summary
+│       │   ├── ItemsPage.js      # Manage items + stock toggle
+│       │   ├── HistoryPage.js    # Transaction history + void
+│       │   ├── DashboardPage.js  # Daily summary
+│       │   ├── ReportsPage.js    # Reports + export (Phase 3)
+│       │   ├── StockPage.js      # Stock management (Phase 4)
+│       │   ├── UsersPage.js      # User management
+│       │   ├── InvitePage.js     # Accept invite page
+│       │   └── SettingsPage.js   # Tenant settings
 │       │
 │       └── components/
-│           ├── Layout/
-│           │   ├── Navbar.js     # Navigation bar
-│           │   └── Sidebar.js    # Side menu
-│           │
-│           ├── POS/
-│           │   ├── ItemGrid.js   # Grid of items to sell
-│           │   ├── Cart.js       # Shopping cart
-│           │   ├── PaymentModal.js # Payment dialog
-│           │   └── Receipt.js    # Receipt/struk display
-│           │
-│           ├── Items/
-│           │   ├── ItemList.js   # List of items
-│           │   ├── ItemForm.js   # Add/edit item form
-│           │   └── ItemCard.js   # Single item card
-│           │
-│           ├── Dashboard/
-│           │   ├── SummaryCard.js # Stats card
-│           │   └── TopItems.js   # Best selling items
-│           │
-│           └── UI/
-│               ├── Button.js     # Reusable button
-│               ├── Input.js      # Reusable input
-│               ├── Modal.js      # Reusable modal
-│               ├── Card.js       # Reusable card
-│               └── Loading.js    # Loading spinner
+│           ├── Layout.js         # ⭐ Sidebar + main layout, role-based menu
+│           ├── PaymentModal.js   # Payment with 3 methods
+│           └── ReceiptModal.js   # Digital receipt display
 │
-└── tests/
-    ├── __init__.py
-    └── test_phase1.py            # Phase 1 tests
+└── test_reports/                 # Test results dari testing agent
+    ├── iteration_1.json          # Phase 1 test results
+    ├── iteration_2.json          # Phase 2 test results
+    └── iteration_3.json          # Phase 3 test results
 ```
 
 ---
 
-## File yang Dibuat Per Phase
+## 📝 PENJELASAN FILE UTAMA
 
-### ✅ PHASE 1: Bisa Jualan
+### Backend: `/app/backend/server.py`
 
-#### Backend Files
-```
-backend/
-├── config/database.py            # MongoDB setup
-├── models/
-│   ├── tenant.py                 # Tenant schema
-│   ├── user.py                   # User schema
-│   ├── item.py                   # Item schema
-│   └── transaction.py            # Transaction schema
-├── routes/
-│   ├── ai.py                     # POST /api/v1/ai/onboard
-│   ├── auth.py                   # POST /api/v1/auth/login
-│   ├── items.py                  # CRUD /api/v1/items
-│   ├── transactions.py           # /api/v1/transactions
-│   └── dashboard.py              # GET /api/v1/dashboard/today
-├── services/
-│   ├── ai_service.py             # OpenAI chat
-│   └── auth_service.py           # JWT handling
-└── utils/helpers.py              # Format rupiah, dll
-```
+File ini berisi SEMUA logic backend dalam 1 file (~1300 lines). Struktur internal:
 
-#### Frontend Files
-```
-frontend/src/
-├── api/index.js                  # API client
-├── contexts/
-│   ├── AuthContext.js            # Auth state
-│   └── CartContext.js            # Cart state
-├── pages/
-│   ├── OnboardingPage.js         # AI onboarding
-│   ├── LoginPage.js              # Login
-│   ├── POSPage.js                # Main POS
-│   ├── ItemsPage.js              # Manage items
-│   ├── HistoryPage.js            # History
-│   └── DashboardPage.js          # Summary
-└── components/
-    ├── Layout/Navbar.js
-    ├── POS/ItemGrid.js
-    ├── POS/Cart.js
-    ├── POS/PaymentModal.js
-    ├── POS/Receipt.js
-    └── UI/*.js
-```
+```python
+# === IMPORTS & CONFIG (Line 1-50) ===
+# FastAPI, MongoDB, JWT, OpenAI setup
 
----
+# === MODELS (Line 52-220) ===
+# Pydantic models untuk semua entity:
+# - TenantConfig, Tenant
+# - User, UserCreate, UserLogin, UserResponse, UserInvite, UserUpdate
+# - Item, ItemCreate, ItemUpdate (dengan stock fields)
+# - StockAdjustment, StockAdjustmentRequest
+# - Transaction, TransactionItem, TransactionCreate, TransactionVoid
+# - AISession, AIOnboardMessage
 
-### 📌 PHASE 2: Toko Sendiri (Tambahan)
+# === HELPER FUNCTIONS (Line 220-350) ===
+# - get_current_user() - JWT verification
+# - require_owner() - Role check
+# - generate_transaction_number() - Format: YYYYMMDD-XXX
+# - format_rupiah() - "Rp 15.000"
+# - process_ai_response() - Parse AI onboarding response
 
-#### Backend Files Tambahan
-```
-backend/
-├── middleware/
-│   └── tenant.py                 # Subdomain middleware
-├── routes/
-│   ├── users.py                  # Invite & manage users
-│   └── settings.py               # Tenant settings
-```
+# === HEALTH & AI ROUTES (Line 350-500) ===
+# - GET /api/health
+# - POST /api/v1/ai/onboard
 
-#### Frontend Files Tambahan
-```
-frontend/src/
-├── pages/
-│   ├── SettingsPage.js           # Pengaturan toko
-│   └── UsersPage.js              # Kelola karyawan
-└── components/
-    └── Users/
-        ├── UserList.js
-        └── InviteForm.js
-```
+# === AUTH ROUTES (Line 500-600) ===
+# - POST /api/v1/auth/login
+# - GET /api/v1/auth/me
+# - PUT /api/v1/auth/password
 
----
+# === ITEMS ROUTES (Line 600-700) ===
+# - GET /api/v1/items
+# - POST /api/v1/items
+# - PUT /api/v1/items/{id}
+# - DELETE /api/v1/items/{id}
 
-### 📌 PHASE 3: Cara Bayar & Laporan (Tambahan)
+# === TRANSACTIONS ROUTES (Line 700-900) ===
+# - GET /api/v1/transactions
+# - GET /api/v1/transactions/{id}
+# - POST /api/v1/transactions (with stock deduction)
+# - POST /api/v1/transactions/{id}/void (with stock return)
 
-#### Backend Files Tambahan
-```
-backend/
-├── models/
-│   └── payment.py                # Payment schema
-├── routes/
-│   └── reports.py                # Laporan endpoints
-└── services/
-    └── report_service.py         # Generate reports
-```
+# === REPORTS ROUTES (Line 900-1100) ===
+# - GET /api/v1/reports/summary
+# - GET /api/v1/reports/daily
+# - GET /api/v1/reports/export
 
-#### Frontend Files Tambahan
-```
-frontend/src/
-├── pages/
-│   └── ReportsPage.js            # Halaman laporan
-└── components/
-    ├── Reports/
-    │   ├── ReportFilter.js
-    │   └── ReportTable.js
-    └── POS/
-        └── PaymentMethodSelect.js
+# === STOCK ROUTES - Phase 4 (Line 1100-1250) ===
+# - GET /api/v1/stock
+# - GET /api/v1/stock/alerts
+# - POST /api/v1/stock/{item_id}/adjust
+# - GET /api/v1/stock/{item_id}/history
+
+# === DASHBOARD & SETTINGS ROUTES (Line 1250-1350) ===
+# - GET /api/v1/dashboard/today
+# - GET /api/v1/settings
+# - PUT /api/v1/settings
+
+# === USER MANAGEMENT ROUTES (Line 1350-1500) ===
+# - GET /api/v1/users
+# - POST /api/v1/users/invite
+# - GET /api/v1/users/invite/{token}
+# - POST /api/v1/users/accept-invite
+# - PUT /api/v1/users/{id}
+# - DELETE /api/v1/users/{id}
+
+# === TENANT ROUTES (Line 1500-end) ===
+# - GET /api/v1/tenant/check/{subdomain}
 ```
 
 ---
 
-### 📌 PHASE 4: Stok Barang (Tambahan)
+### Frontend: `/app/frontend/src/App.js`
 
-#### Backend Files Tambahan
-```
-backend/
-├── models/
-│   ├── stock.py                  # Stock schema
-│   └── stock_movement.py         # Movement schema
-├── routes/
-│   └── stocks.py                 # Stock endpoints
-└── services/
-    └── stock_service.py          # Stock logic
-```
+Router utama dengan protected routes:
 
-#### Frontend Files Tambahan
-```
-frontend/src/
-├── pages/
-│   └── StocksPage.js             # Halaman stok
-└── components/
-    └── Stocks/
-        ├── StockList.js
-        ├── StockAlert.js
-        └── PurchaseForm.js
+```jsx
+// Public Routes (tanpa login)
+<Route path="/" element={<OnboardingPage />} />
+<Route path="/login" element={<LoginPage />} />
+<Route path="/invite/:token" element={<InvitePage />} />
+
+// Protected Routes - All Users
+<Route path="/pos" element={<ProtectedRoute><POSPage /></ProtectedRoute>} />
+<Route path="/items" element={<ProtectedRoute><ItemsPage /></ProtectedRoute>} />
+<Route path="/history" element={<ProtectedRoute><HistoryPage /></ProtectedRoute>} />
+<Route path="/dashboard" element={<ProtectedRoute><DashboardPage /></ProtectedRoute>} />
+
+// Protected Routes - Owner Only
+<Route path="/reports" element={<ProtectedRoute ownerOnly><ReportsPage /></ProtectedRoute>} />
+<Route path="/stock" element={<ProtectedRoute ownerOnly><StockPage /></ProtectedRoute>} />
+<Route path="/users" element={<ProtectedRoute ownerOnly><UsersPage /></ProtectedRoute>} />
+<Route path="/settings" element={<ProtectedRoute ownerOnly><SettingsPage /></ProtectedRoute>} />
 ```
 
 ---
 
-### 📌 PHASE 5: Pelanggan & Promo (Tambahan)
+### Frontend: `/app/frontend/src/api/index.js`
 
-#### Backend Files Tambahan
-```
-backend/
-├── models/
-│   ├── customer.py               # Customer schema
-│   └── promo.py                  # Promo schema
-├── routes/
-│   ├── customers.py              # Customer endpoints
-│   └── promos.py                 # Promo endpoints
-└── services/
-    └── promo_service.py          # Promo calculation
-```
+Semua API calls dikumpulkan di sini:
 
-#### Frontend Files Tambahan
-```
-frontend/src/
-├── pages/
-│   ├── CustomersPage.js          # Halaman pelanggan
-│   └── PromosPage.js             # Halaman promo
-└── components/
-    ├── Customers/
-    │   ├── CustomerList.js
-    │   ├── CustomerForm.js
-    │   └── PointsDisplay.js
-    └── Promos/
-        ├── PromoList.js
-        └── PromoForm.js
-```
+```javascript
+// AI Onboarding
+export const aiOnboard = (message, sessionId) => ...
 
----
+// Auth
+export const login = (email, password) => ...
+export const getMe = () => ...
+export const changePassword = (newPassword) => ...
 
-### 📌 PHASE 6: Booking & Jadwal (Tambahan)
+// Items
+export const getItems = (activeOnly, search) => ...
+export const createItem = (name, price, trackStock, stock, threshold) => ...
+export const updateItem = (id, data) => ...
+export const deleteItem = (id) => ...
 
-#### Backend Files Tambahan
-```
-backend/
-├── models/
-│   ├── schedule.py               # Schedule schema
-│   ├── service.py                # Service schema
-│   ├── booking.py                # Booking schema
-│   └── order.py                  # Order schema (laundry)
-├── routes/
-│   ├── schedules.py              # Schedule endpoints
-│   ├── services.py               # Service endpoints
-│   ├── bookings.py               # Booking endpoints
-│   └── orders.py                 # Order endpoints
-```
+// Transactions
+export const getTransactions = (date, limit, offset) => ...
+export const getTransaction = (id) => ...
+export const createTransaction = (items, method, amount, reference) => ...
+export const voidTransaction = (id, reason) => ...
 
-#### Frontend Files Tambahan
-```
-frontend/src/
-├── pages/
-│   ├── SchedulesPage.js          # Jadwal buka
-│   ├── ServicesPage.js           # Layanan
-│   ├── BookingsPage.js           # Booking
-│   └── OrdersPage.js             # Pesanan (laundry)
-└── components/
-    ├── Schedules/
-    │   └── ScheduleForm.js
-    ├── Bookings/
-    │   ├── BookingCalendar.js
-    │   └── BookingForm.js
-    └── Orders/
-        ├── OrderList.js
-        └── OrderStatusUpdate.js
+// Dashboard
+export const getDashboardToday = () => ...
+
+// Reports
+export const getReportSummary = (startDate, endDate) => ...
+export const getDailyReport = (date) => ...
+export const exportReport = (startDate, endDate, format) => ...
+
+// Stock (Phase 4)
+export const getStockSummary = (lowStockOnly) => ...
+export const getStockAlerts = () => ...
+export const adjustStock = (itemId, type, quantity, reason) => ...
+export const getStockHistory = (itemId, limit) => ...
+
+// Users
+export const getUsers = () => ...
+export const inviteUser = (name, email, role) => ...
+export const getInviteInfo = (token) => ...
+export const acceptInvite = (token, password) => ...
+export const updateUser = (id, data) => ...
+export const deleteUser = (id) => ...
+
+// Settings & Tenant
+export const getSettings = () => ...
+export const updateSettings = (data) => ...
+export const checkSubdomain = (subdomain) => ...
 ```
 
 ---
 
-## Environment Variables
+### Frontend: `/app/frontend/src/components/Layout.js`
 
-### Backend (.env)
+Sidebar dengan menu berdasarkan role:
+
+```javascript
+const navItems = [
+  { to: '/pos', icon: LayoutGrid, label: 'Kasir', roles: ['pemilik', 'kasir'] },
+  { to: '/items', icon: Package, label: 'Barang', roles: ['pemilik', 'kasir'] },
+  { to: '/history', icon: Receipt, label: 'Riwayat', roles: ['pemilik', 'kasir'] },
+  { to: '/dashboard', icon: BarChart3, label: 'Ringkasan', roles: ['pemilik', 'kasir'] },
+  { to: '/reports', icon: FileBarChart, label: 'Laporan', roles: ['pemilik'] },
+  { to: '/stock', icon: Boxes, label: 'Stok', roles: ['pemilik'] },
+  { to: '/users', icon: Users, label: 'Karyawan', roles: ['pemilik'] },
+  { to: '/settings', icon: Settings, label: 'Pengaturan', roles: ['pemilik'] },
+];
+```
+
+---
+
+## 🔧 Environment Variables
+
+### Backend `.env`
 ```env
-# Database
 MONGO_URL=mongodb://...
-
-# JWT
-JWT_SECRET=your-secret-key
+DB_NAME=aikasir_db
+JWT_SECRET=aikasir-secret-key
 JWT_ALGORITHM=HS256
-JWT_EXPIRATION_HOURS=24
-
-# OpenAI
-OPENAI_API_KEY=your-openai-key
+OPENAI_API_KEY=sk-...
 ```
 
-### Frontend (.env)
+### Frontend `.env`
 ```env
-# API
-REACT_APP_BACKEND_URL=https://...
+REACT_APP_BACKEND_URL=https://tenant-pos-5.preview.emergentagent.com
 ```
 
 ---
 
-## Dependencies
+## 📦 Dependencies
 
-### Backend (requirements.txt)
+### Backend (`requirements.txt`)
 ```
 fastapi
 uvicorn
-motor
+motor          # Async MongoDB driver
 pydantic
-python-jose[cryptography]
-passlib[bcrypt]
+python-jose[cryptography]  # JWT
+passlib[bcrypt]  # Password hashing
 python-multipart
+python-dotenv
 openai
+httpx
 ```
 
-### Frontend (package.json)
+### Frontend (`package.json` key dependencies)
 ```json
 {
   "dependencies": {
@@ -351,7 +283,64 @@ openai
     "react-dom": "^18.x",
     "react-router-dom": "^6.x",
     "axios": "^1.x",
-    "tailwindcss": "^3.x"
+    "lucide-react": "^0.x"
   }
 }
 ```
+
+---
+
+## 🗄️ Database Collections (MongoDB)
+
+```
+aikasir_db/
+├── tenants           # Data toko
+├── users             # Users (owner & kasir)
+├── items             # Barang jualan
+├── transactions      # Transaksi/penjualan
+├── ai_sessions       # AI onboarding sessions
+└── stock_adjustments # Riwayat perubahan stok
+```
+
+---
+
+## 📋 Tips untuk Developer Selanjutnya
+
+### 1. Memulai Development
+```bash
+# Backend sudah running via supervisor
+sudo supervisorctl status
+
+# Jika perlu restart backend
+sudo supervisorctl restart backend
+
+# Check logs
+tail -f /var/log/supervisor/backend.err.log
+```
+
+### 2. Menambah Endpoint Baru
+1. Tambah model di section `MODELS` di `server.py`
+2. Tambah route di section yang sesuai
+3. Tambah function di `frontend/src/api/index.js`
+4. Update halaman yang membutuhkan
+
+### 3. Menambah Halaman Baru
+1. Buat file di `frontend/src/pages/NewPage.js`
+2. Import di `App.js`
+3. Tambah Route (protected atau public)
+4. Jika perlu di sidebar, update `Layout.js`
+
+### 4. Testing
+```bash
+# Backend API testing
+cd /app/backend
+pytest tests/ -v
+
+# Atau manual dengan curl
+curl -X POST $API_URL/api/v1/auth/login -H "Content-Type: application/json" \
+  -d '{"email":"kopibangjago@test.com","password":"98ecf367"}'
+```
+
+---
+
+*Last Updated: 2026-01-20*
