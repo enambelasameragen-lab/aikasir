@@ -13,6 +13,7 @@ import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
 import UsersPage from './pages/UsersPage';
 import InvitePage from './pages/InvitePage';
+import ReportsPage from './pages/ReportsPage';
 
 import './App.css';
 
