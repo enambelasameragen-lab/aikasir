@@ -731,6 +731,244 @@ async def create_transaction(
         }
     }
 
+@api_router.post("/v1/transactions/{transaction_id}/void")
+async def void_transaction(
+    transaction_id: str,
+    data: TransactionVoid,
+    current_user: dict = Depends(get_current_user)
+):
+    """Void/cancel a transaction (owner only)"""
+    require_owner(current_user)
+    
+    # Find transaction
+    transaction = await db.transactions.find_one({
+        "id": transaction_id,
+        "tenant_id": current_user["tenant_id"]
+    })
+    
+    if not transaction:
+        raise HTTPException(status_code=404, detail="Transaksi tidak ditemukan")
+    
+    if transaction.get("status") == "void":
+        raise HTTPException(status_code=400, detail="Transaksi sudah dibatalkan")
+    
+    # Update transaction status
+    await db.transactions.update_one(
+        {"id": transaction_id},
+        {
+            "$set": {
+                "status": "void",
+                "voided_at": datetime.now(timezone.utc).isoformat(),
+                "voided_by": current_user["id"],
+                "void_reason": data.reason
+            }
+        }
+    )
+    
+    return {
+        "message": "Transaksi berhasil dibatalkan",
+        "transaction_id": transaction_id,
+        "voided_by": current_user["name"],
+        "reason": data.reason
+    }
+
+# ============== REPORTS ROUTES ==============
+
+@api_router.get("/v1/reports/summary")
+async def get_report_summary(
+    start_date: str = None,
+    end_date: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get sales summary report for date range"""
+    require_owner(current_user)
+    
+    # Default to today if no dates provided
+    if not start_date:
+        start_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = start_date
+    
+    # Convert dates to transaction number prefix format
+    start_prefix = start_date.replace("-", "")
+    end_prefix = end_date.replace("-", "")
+    
+    # Build query
+    query = {
+        "tenant_id": current_user["tenant_id"],
+        "status": "selesai"
+    }
+    
+    # Get all transactions in range
+    transactions = await db.transactions.find(query, {"_id": 0}).to_list(10000)
+    
+    # Filter by date range
+    filtered_transactions = []
+    for t in transactions:
+        tx_date = t["transaction_number"][:8]
+        if start_prefix <= tx_date <= end_prefix:
+            filtered_transactions.append(t)
+    
+    # Calculate summary
+    total_sales = sum(t["total"] for t in filtered_transactions)
+    total_transactions = len(filtered_transactions)
+    
+    # Payment method breakdown
+    payment_breakdown = {}
+    for t in filtered_transactions:
+        method = t.get("payment_method", "tunai")
+        if method not in payment_breakdown:
+            payment_breakdown[method] = {"count": 0, "amount": 0}
+        payment_breakdown[method]["count"] += 1
+        payment_breakdown[method]["amount"] += t["total"]
+    
+    # Items breakdown
+    items_summary = {}
+    total_items_sold = 0
+    for t in filtered_transactions:
+        for item in t["items"]:
+            name = item["name"]
+            qty = item["qty"]
+            if name not in items_summary:
+                items_summary[name] = {"qty": 0, "revenue": 0}
+            items_summary[name]["qty"] += qty
+            items_summary[name]["revenue"] += item["subtotal"]
+            total_items_sold += qty
+    
+    # Sort items by revenue
+    top_items = sorted(
+        [{"name": k, **v} for k, v in items_summary.items()],
+        key=lambda x: x["revenue"],
+        reverse=True
+    )[:10]
+    
+    # Daily breakdown (for charts)
+    daily_sales = {}
+    for t in filtered_transactions:
+        tx_date = t["transaction_number"][:8]
+        formatted_date = f"{tx_date[:4]}-{tx_date[4:6]}-{tx_date[6:8]}"
+        if formatted_date not in daily_sales:
+            daily_sales[formatted_date] = {"transactions": 0, "amount": 0}
+        daily_sales[formatted_date]["transactions"] += 1
+        daily_sales[formatted_date]["amount"] += t["total"]
+    
+    return {
+        "period": {
+            "start_date": start_date,
+            "end_date": end_date
+        },
+        "summary": {
+            "total_sales": total_sales,
+            "total_sales_formatted": format_rupiah(total_sales),
+            "total_transactions": total_transactions,
+            "total_items_sold": total_items_sold,
+            "avg_transaction": total_sales // total_transactions if total_transactions > 0 else 0
+        },
+        "payment_breakdown": payment_breakdown,
+        "top_items": top_items,
+        "daily_sales": daily_sales
+    }
+
+@api_router.get("/v1/reports/daily")
+async def get_daily_report(
+    date: str = None,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get detailed daily report"""
+    if not date:
+        date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    
+    date_prefix = date.replace("-", "")
+    
+    # Get transactions for the day
+    transactions = await db.transactions.find({
+        "tenant_id": current_user["tenant_id"],
+        "transaction_number": {"$regex": f"^{date_prefix}"}
+    }, {"_id": 0}).sort("created_at", -1).to_list(1000)
+    
+    # Separate by status
+    completed = [t for t in transactions if t.get("status") == "selesai"]
+    voided = [t for t in transactions if t.get("status") == "void"]
+    
+    total_sales = sum(t["total"] for t in completed)
+    total_voided = sum(t["total"] for t in voided)
+    
+    return {
+        "date": date,
+        "summary": {
+            "total_sales": total_sales,
+            "total_sales_formatted": format_rupiah(total_sales),
+            "total_transactions": len(completed),
+            "total_voided": len(voided),
+            "voided_amount": total_voided
+        },
+        "transactions": transactions
+    }
+
+@api_router.get("/v1/reports/export")
+async def export_report(
+    start_date: str = None,
+    end_date: str = None,
+    format: str = "json",
+    current_user: dict = Depends(get_current_user)
+):
+    """Export report data"""
+    require_owner(current_user)
+    
+    if not start_date:
+        start_date = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    if not end_date:
+        end_date = start_date
+    
+    start_prefix = start_date.replace("-", "")
+    end_prefix = end_date.replace("-", "")
+    
+    # Get all transactions in range
+    transactions = await db.transactions.find({
+        "tenant_id": current_user["tenant_id"]
+    }, {"_id": 0}).to_list(10000)
+    
+    # Filter by date range
+    filtered_transactions = []
+    for t in transactions:
+        tx_date = t["transaction_number"][:8]
+        if start_prefix <= tx_date <= end_prefix:
+            # Flatten for export
+            filtered_transactions.append({
+                "transaction_number": t["transaction_number"],
+                "date": t.get("created_at", "")[:10] if t.get("created_at") else "",
+                "time": t.get("created_at", "")[11:19] if t.get("created_at") else "",
+                "items": ", ".join([f"{item['name']} x{item['qty']}" for item in t["items"]]),
+                "total": t["total"],
+                "payment_method": t.get("payment_method", "tunai"),
+                "status": t.get("status", "selesai"),
+                "cashier": t.get("created_by_name", "")
+            })
+    
+    if format == "csv":
+        # Generate CSV
+        import csv
+        import io
+        
+        output = io.StringIO()
+        if filtered_transactions:
+            writer = csv.DictWriter(output, fieldnames=filtered_transactions[0].keys())
+            writer.writeheader()
+            writer.writerows(filtered_transactions)
+        
+        return {
+            "format": "csv",
+            "data": output.getvalue(),
+            "filename": f"laporan_{start_date}_to_{end_date}.csv"
+        }
+    
+    return {
+        "format": "json",
+        "period": {"start_date": start_date, "end_date": end_date},
+        "total_records": len(filtered_transactions),
+        "data": filtered_transactions
+    }
+
 # ============== DASHBOARD ROUTES ==============
 
 @api_router.get("/v1/dashboard/today")
