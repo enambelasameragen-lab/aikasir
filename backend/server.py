@@ -1137,6 +1137,181 @@ async def get_dashboard_today(current_user: dict = Depends(get_current_user)):
         "top_items": top_items
     }
 
+# ============== STOCK MANAGEMENT ROUTES (Phase 4) ==============
+
+@api_router.get("/v1/stock")
+async def get_stock_summary(
+    low_stock_only: bool = False,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get stock summary for all items"""
+    query = {
+        "tenant_id": current_user["tenant_id"],
+        "is_active": True,
+        "track_stock": True
+    }
+    
+    items = await db.items.find(query, {"_id": 0}).sort("name", 1).to_list(1000)
+    
+    # Filter low stock if requested
+    if low_stock_only:
+        items = [
+            item for item in items 
+            if item.get("stock", 0) <= item.get("low_stock_threshold", 10)
+        ]
+    
+    # Calculate statistics
+    total_items = len(items)
+    low_stock_items = [
+        item for item in items 
+        if item.get("stock", 0) <= item.get("low_stock_threshold", 10)
+    ]
+    out_of_stock_items = [item for item in items if item.get("stock", 0) == 0]
+    
+    return {
+        "items": items,
+        "summary": {
+            "total_tracked_items": total_items,
+            "low_stock_count": len(low_stock_items),
+            "out_of_stock_count": len(out_of_stock_items)
+        },
+        "low_stock_items": low_stock_items,
+        "out_of_stock_items": out_of_stock_items
+    }
+
+@api_router.get("/v1/stock/alerts")
+async def get_stock_alerts(current_user: dict = Depends(get_current_user)):
+    """Get stock alerts (low stock and out of stock)"""
+    items = await db.items.find({
+        "tenant_id": current_user["tenant_id"],
+        "is_active": True,
+        "track_stock": True
+    }, {"_id": 0}).to_list(1000)
+    
+    alerts = []
+    for item in items:
+        stock = item.get("stock", 0)
+        threshold = item.get("low_stock_threshold", 10)
+        
+        if stock == 0:
+            alerts.append({
+                "type": "out_of_stock",
+                "severity": "critical",
+                "item_id": item["id"],
+                "item_name": item["name"],
+                "stock": stock,
+                "message": f"{item['name']} sudah habis!"
+            })
+        elif stock <= threshold:
+            alerts.append({
+                "type": "low_stock",
+                "severity": "warning",
+                "item_id": item["id"],
+                "item_name": item["name"],
+                "stock": stock,
+                "threshold": threshold,
+                "message": f"Stok {item['name']} tinggal {stock}"
+            })
+    
+    return {
+        "alerts": alerts,
+        "total_alerts": len(alerts),
+        "critical_count": len([a for a in alerts if a["severity"] == "critical"]),
+        "warning_count": len([a for a in alerts if a["severity"] == "warning"])
+    }
+
+@api_router.post("/v1/stock/{item_id}/adjust")
+async def adjust_stock(
+    item_id: str,
+    data: StockAdjustmentRequest,
+    current_user: dict = Depends(get_current_user)
+):
+    """Adjust stock for an item (owner only)"""
+    require_owner(current_user)
+    
+    item = await db.items.find_one({
+        "id": item_id,
+        "tenant_id": current_user["tenant_id"]
+    })
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Barang tidak ditemukan")
+    
+    if not item.get("track_stock", False):
+        raise HTTPException(status_code=400, detail="Barang ini tidak melacak stok")
+    
+    current_stock = item.get("stock", 0)
+    
+    # Calculate new stock based on adjustment type
+    if data.adjustment_type == "add":
+        new_stock = current_stock + data.quantity
+    elif data.adjustment_type == "subtract":
+        new_stock = current_stock - data.quantity
+        if new_stock < 0:
+            raise HTTPException(status_code=400, detail="Stok tidak boleh negatif")
+    elif data.adjustment_type == "set":
+        if data.quantity < 0:
+            raise HTTPException(status_code=400, detail="Stok tidak boleh negatif")
+        new_stock = data.quantity
+    else:
+        raise HTTPException(status_code=400, detail="Tipe penyesuaian tidak valid")
+    
+    # Update item stock
+    await db.items.update_one({"id": item_id}, {"$set": {"stock": new_stock}})
+    
+    # Create stock adjustment record
+    stock_adj = StockAdjustment(
+        tenant_id=current_user["tenant_id"],
+        item_id=item_id,
+        item_name=item["name"],
+        adjustment_type=data.adjustment_type,
+        quantity=data.quantity,
+        stock_before=current_stock,
+        stock_after=new_stock,
+        reason=data.reason,
+        created_by=current_user["id"],
+        created_by_name=current_user["name"]
+    )
+    stock_adj_dict = stock_adj.model_dump()
+    stock_adj_dict["created_at"] = stock_adj_dict["created_at"].isoformat()
+    await db.stock_adjustments.insert_one(stock_adj_dict)
+    
+    return {
+        "message": "Stok berhasil diperbarui",
+        "item_id": item_id,
+        "item_name": item["name"],
+        "stock_before": current_stock,
+        "stock_after": new_stock,
+        "adjustment_type": data.adjustment_type,
+        "quantity": data.quantity
+    }
+
+@api_router.get("/v1/stock/{item_id}/history")
+async def get_stock_history(
+    item_id: str,
+    limit: int = 50,
+    current_user: dict = Depends(get_current_user)
+):
+    """Get stock adjustment history for an item"""
+    item = await db.items.find_one({
+        "id": item_id,
+        "tenant_id": current_user["tenant_id"]
+    }, {"_id": 0})
+    
+    if not item:
+        raise HTTPException(status_code=404, detail="Barang tidak ditemukan")
+    
+    adjustments = await db.stock_adjustments.find({
+        "item_id": item_id,
+        "tenant_id": current_user["tenant_id"]
+    }, {"_id": 0}).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return {
+        "item": item,
+        "history": adjustments,
+        "total": len(adjustments)
+    }
+
 # ============== SETTINGS ROUTES ==============
 
 @api_router.get("/v1/settings")
