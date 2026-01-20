@@ -506,6 +506,9 @@ async def create_item(
     item_dict["created_at"] = item_dict["created_at"].isoformat()
     await db.items.insert_one(item_dict)
     
+    # Remove MongoDB _id before returning
+    item_dict.pop("_id", None)
+    
     return item_dict
 
 @api_router.put("/v1/items/{item_id}")
