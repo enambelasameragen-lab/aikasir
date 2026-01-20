@@ -190,6 +190,10 @@ def create_token(user_id: str, tenant_id: str) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
+def create_invite_token() -> str:
+    """Generate unique invite token"""
+    return str(uuid.uuid4())
+
 def decode_token(token: str) -> dict:
     try:
         payload = jwt.decode(token, JWT_SECRET, algorithms=[JWT_ALGORITHM])
@@ -208,6 +212,12 @@ async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(s
     if not user:
         raise HTTPException(status_code=401, detail="User tidak ditemukan")
     return user
+
+def require_owner(current_user: dict):
+    """Check if user is owner/pemilik"""
+    if current_user.get("role") != "pemilik":
+        raise HTTPException(status_code=403, detail="Hanya pemilik yang bisa melakukan ini")
+    return current_user
 
 def generate_subdomain(name: str) -> str:
     """Generate subdomain from business name"""
