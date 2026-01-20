@@ -11,6 +11,7 @@ import {
   LogOut,
   Users,
   FileBarChart,
+  Boxes,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -29,6 +30,7 @@ const Layout = ({ children }) => {
     { to: '/history', icon: Receipt, label: 'Riwayat', roles: ['pemilik', 'kasir'] },
     { to: '/dashboard', icon: BarChart3, label: 'Ringkasan', roles: ['pemilik', 'kasir'] },
     { to: '/reports', icon: FileBarChart, label: 'Laporan', roles: ['pemilik'] },
+    { to: '/stock', icon: Boxes, label: 'Stok', roles: ['pemilik'] },
     { to: '/users', icon: Users, label: 'Karyawan', roles: ['pemilik'] },
     { to: '/settings', icon: Settings, label: 'Pengaturan', roles: ['pemilik'] },
   ];
