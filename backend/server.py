@@ -678,11 +678,21 @@ async def create_transaction(
         ))
         total += subtotal
     
-    # Validate payment
-    if data.payment_amount < total:
-        raise HTTPException(status_code=400, detail="Pembayaran kurang dari total")
+    # Validate payment method
+    valid_methods = ["tunai", "qris", "transfer"]
+    if data.payment_method not in valid_methods:
+        raise HTTPException(status_code=400, detail="Metode pembayaran tidak valid")
     
-    change_amount = data.payment_amount - total
+    # Validate payment - only for tunai need to check amount
+    if data.payment_method == "tunai":
+        if data.payment_amount < total:
+            raise HTTPException(status_code=400, detail="Pembayaran kurang dari total")
+        change_amount = data.payment_amount - total
+    else:
+        # For QRIS/Transfer, payment amount should be exact
+        change_amount = 0
+        if data.payment_amount < total:
+            data.payment_amount = total  # Auto-set to total for non-cash
     
     # Generate transaction number
     transaction_number = await generate_transaction_number(current_user["tenant_id"])
@@ -693,9 +703,11 @@ async def create_transaction(
         transaction_number=transaction_number,
         items=[item.model_dump() for item in transaction_items],
         total=total,
+        final_total=total,
         payment_method=data.payment_method,
         payment_amount=data.payment_amount,
         change_amount=change_amount,
+        payment_reference=data.payment_reference,
         created_by=current_user["id"],
         created_by_name=current_user["name"]
     )
