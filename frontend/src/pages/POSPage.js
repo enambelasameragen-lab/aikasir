@@ -60,7 +60,7 @@ const POSPage = () => {
     return () => clearTimeout(debounce);
   }, [search]);
 
-  const handlePayment = async (paymentAmount) => {
+  const handlePayment = async (paymentMethod, paymentAmount, paymentReference) => {
     try {
       const transactionItems = cartItems.map((item) => ({
         item_id: item.id,
@@ -69,8 +69,9 @@ const POSPage = () => {
 
       const response = await createTransaction(
         transactionItems,
-        'tunai',
-        paymentAmount
+        paymentMethod,
+        paymentAmount,
+        paymentReference
       );
 
       setLastTransaction(response.data);
