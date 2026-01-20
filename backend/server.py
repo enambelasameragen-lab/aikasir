@@ -607,6 +607,14 @@ async def update_item(
         if data.price <= 0:
             raise HTTPException(status_code=400, detail="Harga harus lebih dari 0")
         update_data["price"] = data.price
+    if data.track_stock is not None:
+        update_data["track_stock"] = data.track_stock
+    if data.stock is not None:
+        if data.stock < 0:
+            raise HTTPException(status_code=400, detail="Stok tidak boleh negatif")
+        update_data["stock"] = data.stock
+    if data.low_stock_threshold is not None:
+        update_data["low_stock_threshold"] = data.low_stock_threshold
     
     if update_data:
         await db.items.update_one({"id": item_id}, {"$set": update_data})
