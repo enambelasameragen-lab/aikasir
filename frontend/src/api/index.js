@@ -82,4 +82,24 @@ export const getSettings = () => api.get('/settings');
 
 export const updateSettings = (data) => api.put('/settings', data);
 
+// Users Management
+export const getUsers = () => api.get('/users');
+
+export const inviteUser = (name, email, role = 'kasir') =>
+  api.post('/users/invite', { name, email, role });
+
+export const getInviteInfo = (token) => api.get(`/users/invite/${token}`);
+
+export const acceptInvite = (token, password) =>
+  api.post('/users/accept-invite', { token, password });
+
+export const updateUser = (id, data) => api.put(`/users/${id}`, data);
+
+export const deleteUser = (id) => api.delete(`/users/${id}`);
+
+// Tenant/Subdomain
+export const checkSubdomain = (subdomain) => api.get(`/tenant/check/${subdomain}`);
+
+export const getTenantBySubdomain = (subdomain) => api.get(`/tenant/by-subdomain/${subdomain}`);
+
 export default api;
