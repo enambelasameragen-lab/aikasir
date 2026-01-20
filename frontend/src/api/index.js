@@ -116,4 +116,16 @@ export const checkSubdomain = (subdomain) => api.get(`/tenant/check/${subdomain}
 
 export const getTenantBySubdomain = (subdomain) => api.get(`/tenant/by-subdomain/${subdomain}`);
 
+// Stock Management (Phase 4)
+export const getStockSummary = (lowStockOnly = false) =>
+  api.get('/stock', { params: { low_stock_only: lowStockOnly } });
+
+export const getStockAlerts = () => api.get('/stock/alerts');
+
+export const adjustStock = (itemId, adjustmentType, quantity, reason = null) =>
+  api.post(`/stock/${itemId}/adjust`, { adjustment_type: adjustmentType, quantity, reason });
+
+export const getStockHistory = (itemId, limit = 50) =>
+  api.get(`/stock/${itemId}/history`, { params: { limit } });
+
 export default api;
