@@ -791,6 +791,237 @@ async def update_settings(
     tenant = await db.tenants.find_one({"id": current_user["tenant_id"]}, {"_id": 0})
     return tenant
 
+# ============== USER MANAGEMENT ROUTES ==============
+
+@api_router.get("/v1/users")
+async def get_users(current_user: dict = Depends(get_current_user)):
+    """Get all users for current tenant (owner only)"""
+    require_owner(current_user)
+    
+    users = await db.users.find(
+        {"tenant_id": current_user["tenant_id"]},
+        {"_id": 0, "password": 0, "invite_token": 0}
+    ).sort("created_at", -1).to_list(100)
+    
+    return {"users": users, "total": len(users)}
+
+@api_router.post("/v1/users/invite", status_code=201)
+async def invite_user(
+    data: UserInvite,
+    current_user: dict = Depends(get_current_user)
+):
+    """Invite new user (kasir) to tenant"""
+    require_owner(current_user)
+    
+    # Check if email already exists
+    existing = await db.users.find_one({"email": data.email})
+    if existing:
+        raise HTTPException(status_code=400, detail="Email sudah terdaftar")
+    
+    # Create invite token
+    invite_token = create_invite_token()
+    
+    # Create user with invited status
+    user = User(
+        tenant_id=current_user["tenant_id"],
+        name=data.name,
+        email=data.email,
+        password="",  # Will be set when accepting invite
+        role=data.role if data.role in ["kasir", "pemilik"] else "kasir",
+        status="invited",
+        invited_by=current_user["id"],
+        invite_token=invite_token
+    )
+    
+    user_dict = user.model_dump()
+    user_dict["created_at"] = user_dict["created_at"].isoformat()
+    await db.users.insert_one(user_dict)
+    user_dict.pop("_id", None)
+    
+    # Get tenant for invite link
+    tenant = await db.tenants.find_one({"id": current_user["tenant_id"]}, {"_id": 0})
+    
+    return {
+        "user": {
+            "id": user.id,
+            "name": user.name,
+            "email": user.email,
+            "role": user.role,
+            "status": user.status
+        },
+        "invite_token": invite_token,
+        "invite_link": f"/invite/{invite_token}",
+        "message": f"Undangan berhasil dikirim ke {data.email}"
+    }
+
+@api_router.post("/v1/users/accept-invite")
+async def accept_invite(data: AcceptInvite):
+    """Accept invitation and set password"""
+    # Find user by invite token
+    user = await db.users.find_one({"invite_token": data.token}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Link undangan tidak valid")
+    
+    if user.get("status") != "invited":
+        raise HTTPException(status_code=400, detail="Undangan sudah digunakan")
+    
+    if len(data.password) < 6:
+        raise HTTPException(status_code=400, detail="Password minimal 6 karakter")
+    
+    # Update user with password and active status
+    await db.users.update_one(
+        {"id": user["id"]},
+        {
+            "$set": {
+                "password": hash_password(data.password),
+                "status": "active",
+                "invite_token": None,
+                "is_active": True
+            }
+        }
+    )
+    
+    # Create token for auto-login
+    token = create_token(user["id"], user["tenant_id"])
+    
+    # Get tenant
+    tenant = await db.tenants.find_one({"id": user["tenant_id"]}, {"_id": 0})
+    
+    return {
+        "message": "Selamat datang! Akun kamu sudah aktif",
+        "token": token,
+        "user": {
+            "id": user["id"],
+            "name": user["name"],
+            "email": user["email"],
+            "role": user["role"]
+        },
+        "tenant": {
+            "id": tenant["id"] if tenant else None,
+            "name": tenant["name"] if tenant else None,
+            "subdomain": tenant.get("subdomain") if tenant else None
+        }
+    }
+
+@api_router.get("/v1/users/invite/{token}")
+async def get_invite_info(token: str):
+    """Get invitation info for accept invite page"""
+    user = await db.users.find_one({"invite_token": token}, {"_id": 0})
+    if not user:
+        raise HTTPException(status_code=404, detail="Link undangan tidak valid")
+    
+    if user.get("status") != "invited":
+        raise HTTPException(status_code=400, detail="Undangan sudah digunakan")
+    
+    # Get tenant info
+    tenant = await db.tenants.find_one({"id": user["tenant_id"]}, {"_id": 0})
+    
+    # Get inviter info
+    inviter = await db.users.find_one({"id": user.get("invited_by")}, {"_id": 0})
+    
+    return {
+        "name": user["name"],
+        "email": user["email"],
+        "role": user["role"],
+        "tenant_name": tenant["name"] if tenant else "Toko",
+        "invited_by": inviter["name"] if inviter else "Pemilik"
+    }
+
+@api_router.put("/v1/users/{user_id}")
+async def update_user(
+    user_id: str,
+    data: UserUpdate,
+    current_user: dict = Depends(get_current_user)
+):
+    """Update user (owner only)"""
+    require_owner(current_user)
+    
+    # Can't edit yourself through this endpoint
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Gunakan halaman profil untuk edit akun sendiri")
+    
+    user = await db.users.find_one({
+        "id": user_id,
+        "tenant_id": current_user["tenant_id"]
+    })
+    if not user:
+        raise HTTPException(status_code=404, detail="Karyawan tidak ditemukan")
+    
+    update_data = {}
+    if data.name is not None:
+        update_data["name"] = data.name
+    if data.role is not None and data.role in ["kasir", "pemilik"]:
+        update_data["role"] = data.role
+    if data.is_active is not None:
+        update_data["is_active"] = data.is_active
+        update_data["status"] = "active" if data.is_active else "disabled"
+    
+    if update_data:
+        await db.users.update_one({"id": user_id}, {"$set": update_data})
+    
+    updated_user = await db.users.find_one({"id": user_id}, {"_id": 0, "password": 0, "invite_token": 0})
+    return updated_user
+
+@api_router.delete("/v1/users/{user_id}")
+async def delete_user(
+    user_id: str,
+    current_user: dict = Depends(get_current_user)
+):
+    """Delete/disable user (owner only)"""
+    require_owner(current_user)
+    
+    # Can't delete yourself
+    if user_id == current_user["id"]:
+        raise HTTPException(status_code=400, detail="Tidak bisa hapus akun sendiri")
+    
+    user = await db.users.find_one({
+        "id": user_id,
+        "tenant_id": current_user["tenant_id"]
+    })
+    if not user:
+        raise HTTPException(status_code=404, detail="Karyawan tidak ditemukan")
+    
+    # Soft delete - disable user
+    await db.users.update_one(
+        {"id": user_id},
+        {"$set": {"is_active": False, "status": "disabled"}}
+    )
+    
+    return {"message": "Karyawan berhasil dihapus"}
+
+# ============== TENANT/SUBDOMAIN ROUTES ==============
+
+@api_router.get("/v1/tenant/check/{subdomain}")
+async def check_subdomain(subdomain: str):
+    """Check if subdomain exists and get tenant info"""
+    tenant = await db.tenants.find_one({"subdomain": subdomain.lower()}, {"_id": 0})
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Toko tidak ditemukan")
+    
+    return {
+        "exists": True,
+        "tenant": {
+            "id": tenant["id"],
+            "name": tenant["name"],
+            "subdomain": tenant["subdomain"]
+        }
+    }
+
+@api_router.get("/v1/tenant/by-subdomain/{subdomain}")
+async def get_tenant_by_subdomain(subdomain: str):
+    """Get full tenant info by subdomain (for public pages)"""
+    tenant = await db.tenants.find_one({"subdomain": subdomain.lower()}, {"_id": 0})
+    if not tenant:
+        raise HTTPException(status_code=404, detail="Toko tidak ditemukan")
+    
+    return {
+        "id": tenant["id"],
+        "name": tenant["name"],
+        "subdomain": tenant["subdomain"],
+        "address": tenant.get("address"),
+        "phone": tenant.get("phone")
+    }
+
 # ============== LEGACY/BASIC ROUTES ==============
 
 @api_router.get("/")
