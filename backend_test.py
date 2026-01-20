@@ -433,7 +433,7 @@ class AIKasirTester:
         
         # Test non-existing subdomain
         success, data = self.make_request('GET', '/v1/tenant/check/nonexistentsubdomain', expected_status=404)
-        nonexistent_check = not success and data.get('detail')
+        nonexistent_check = success and data.get('detail')
         
         self.log_test(
             "Check Non-existing Subdomain", 
