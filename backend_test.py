@@ -405,7 +405,7 @@ class AIKasirTester:
         
         # Test GET users (should fail with 403)
         success, data = self.make_request('GET', '/v1/users', expected_status=403)
-        kasir_blocked = not success and data.get('detail') and '403' in str(data)
+        kasir_blocked = success and data.get('detail') and 'pemilik' in data.get('detail', '')
         
         self.log_test(
             "Kasir Access to Users API (Should Fail)", 
