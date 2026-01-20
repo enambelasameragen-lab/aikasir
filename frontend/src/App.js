@@ -138,6 +138,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/stock"
+        element={
+          <ProtectedRoute ownerOnly>
+            <StockPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/settings"
         element={
           <ProtectedRoute ownerOnly>
