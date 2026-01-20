@@ -698,9 +698,10 @@ async def create_transaction(
     if not data.items:
         raise HTTPException(status_code=400, detail="Keranjang tidak boleh kosong")
     
-    # Build transaction items
+    # Build transaction items and check stock
     transaction_items = []
     total = 0
+    items_to_deduct = []  # Items that need stock deduction
     
     for cart_item in data.items:
         item = await db.items.find_one({
@@ -712,6 +713,22 @@ async def create_transaction(
             raise HTTPException(status_code=400, detail=f"Barang tidak ditemukan")
         
         qty = cart_item.get("qty", 1)
+        
+        # Check stock if tracking is enabled
+        if item.get("track_stock", False):
+            current_stock = item.get("stock", 0)
+            if current_stock < qty:
+                raise HTTPException(
+                    status_code=400, 
+                    detail=f"Stok {item['name']} tidak cukup (tersedia: {current_stock})"
+                )
+            items_to_deduct.append({
+                "item_id": item["id"],
+                "item_name": item["name"],
+                "qty": qty,
+                "stock_before": current_stock
+            })
+        
         subtotal = item["price"] * qty
         
         transaction_items.append(TransactionItem(
@@ -760,6 +777,32 @@ async def create_transaction(
     transaction_dict = transaction.model_dump()
     transaction_dict["created_at"] = transaction_dict["created_at"].isoformat()
     await db.transactions.insert_one(transaction_dict)
+    
+    # Deduct stock and create stock adjustments
+    for item_deduct in items_to_deduct:
+        new_stock = item_deduct["stock_before"] - item_deduct["qty"]
+        await db.items.update_one(
+            {"id": item_deduct["item_id"]},
+            {"$set": {"stock": new_stock}}
+        )
+        
+        # Create stock adjustment record
+        stock_adj = StockAdjustment(
+            tenant_id=current_user["tenant_id"],
+            item_id=item_deduct["item_id"],
+            item_name=item_deduct["item_name"],
+            adjustment_type="sale",
+            quantity=item_deduct["qty"],
+            stock_before=item_deduct["stock_before"],
+            stock_after=new_stock,
+            reason=f"Penjualan #{transaction_number}",
+            transaction_id=transaction_dict["id"],
+            created_by=current_user["id"],
+            created_by_name=current_user["name"]
+        )
+        stock_adj_dict = stock_adj.model_dump()
+        stock_adj_dict["created_at"] = stock_adj_dict["created_at"].isoformat()
+        await db.stock_adjustments.insert_one(stock_adj_dict)
     
     # Remove MongoDB _id before returning
     transaction_dict.pop("_id", None)
