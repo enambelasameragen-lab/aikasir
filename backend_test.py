@@ -458,6 +458,9 @@ class AIKasirTester:
             self.test_items_crud,
             self.test_transactions,
             self.test_dashboard,
+            self.test_user_management_owner,
+            self.test_user_management_kasir,
+            self.test_subdomain_check,
         ]
         
         # If login fails, try AI onboarding
