@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { getItems, createItem, updateItem, deleteItem } from '../api';
+import { useAuth } from '../contexts/AuthContext';
 import Layout from '../components/Layout';
 import {
   Plus,
@@ -10,6 +11,8 @@ import {
   Trash2,
   X,
   Save,
+  Boxes,
+  AlertTriangle,
 } from 'lucide-react';
 
 const formatRupiah = (num) => {
@@ -17,12 +20,19 @@ const formatRupiah = (num) => {
 };
 
 const ItemsPage = () => {
+  const { user } = useAuth();
   const [items, setItems] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editItem, setEditItem] = useState(null);
-  const [formData, setFormData] = useState({ name: '', price: '' });
+  const [formData, setFormData] = useState({ 
+    name: '', 
+    price: '', 
+    track_stock: false, 
+    stock: '',
+    low_stock_threshold: '10'
+  });
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
 
