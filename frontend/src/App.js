@@ -11,26 +11,36 @@ import ItemsPage from './pages/ItemsPage';
 import HistoryPage from './pages/HistoryPage';
 import DashboardPage from './pages/DashboardPage';
 import SettingsPage from './pages/SettingsPage';
+import UsersPage from './pages/UsersPage';
+import InvitePage from './pages/InvitePage';
 
 import './App.css';
 
+// Loading Component
+const LoadingScreen = () => (
+  <div className="h-screen flex items-center justify-center bg-gray-50">
+    <div className="text-center">
+      <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+      <p className="text-gray-500">Memuat...</p>
+    </div>
+  </div>
+);
+
 // Protected Route Component
-const ProtectedRoute = ({ children }) => {
-  const { isAuthenticated, loading } = useAuth();
+const ProtectedRoute = ({ children, ownerOnly = false }) => {
+  const { isAuthenticated, loading, user } = useAuth();
 
   if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Memuat...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (!isAuthenticated) {
     return <Navigate to="/login" replace />;
+  }
+
+  // Check owner-only routes
+  if (ownerOnly && user?.role !== 'pemilik') {
+    return <Navigate to="/pos" replace />;
   }
 
   return <CartProvider>{children}</CartProvider>;
@@ -41,14 +51,7 @@ const PublicRoute = ({ children }) => {
   const { isAuthenticated, loading } = useAuth();
 
   if (loading) {
-    return (
-      <div className="h-screen flex items-center justify-center bg-gray-50">
-        <div className="text-center">
-          <div className="w-12 h-12 border-4 border-blue-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-gray-500">Memuat...</p>
-        </div>
-      </div>
-    );
+    return <LoadingScreen />;
   }
 
   if (isAuthenticated) {
@@ -78,8 +81,10 @@ function AppRoutes() {
           </PublicRoute>
         }
       />
+      {/* Invite page - accessible without login */}
+      <Route path="/invite/:token" element={<InvitePage />} />
 
-      {/* Protected Routes */}
+      {/* Protected Routes - All Users */}
       <Route
         path="/pos"
         element={
@@ -112,10 +117,20 @@ function AppRoutes() {
           </ProtectedRoute>
         }
       />
+
+      {/* Protected Routes - Owner Only */}
+      <Route
+        path="/users"
+        element={
+          <ProtectedRoute ownerOnly>
+            <UsersPage />
+          </ProtectedRoute>
+        }
+      />
       <Route
         path="/settings"
         element={
-          <ProtectedRoute>
+          <ProtectedRoute ownerOnly>
             <SettingsPage />
           </ProtectedRoute>
         }
