@@ -129,6 +129,14 @@ function AppRoutes() {
         }
       />
       <Route
+        path="/reports"
+        element={
+          <ProtectedRoute ownerOnly>
+            <ReportsPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/settings"
         element={
           <ProtectedRoute ownerOnly>
