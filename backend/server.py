@@ -77,6 +77,9 @@ class User(BaseModel):
     password: str
     role: str = "pemilik"  # pemilik, kasir
     is_active: bool = True
+    status: str = "active"  # active, invited, disabled
+    invited_by: Optional[str] = None
+    invite_token: Optional[str] = None
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
 class UserCreate(BaseModel):
@@ -94,6 +97,21 @@ class UserResponse(BaseModel):
     name: str
     email: str
     role: str
+    status: str = "active"
+
+class UserInvite(BaseModel):
+    name: str
+    email: str
+    role: str = "kasir"
+
+class UserUpdate(BaseModel):
+    name: Optional[str] = None
+    role: Optional[str] = None
+    is_active: Optional[bool] = None
+
+class AcceptInvite(BaseModel):
+    token: str
+    password: str
 
 # Item Models
 class Item(BaseModel):
