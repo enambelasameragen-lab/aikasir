@@ -112,12 +112,21 @@ const ItemsPage = () => {
       return;
     }
 
+    const stock = parseInt(formData.stock) || 0;
+    const threshold = parseInt(formData.low_stock_threshold) || 10;
+
     setSaving(true);
     try {
       if (editItem) {
-        await updateItem(editItem.id, { name: formData.name, price });
+        await updateItem(editItem.id, { 
+          name: formData.name, 
+          price,
+          track_stock: formData.track_stock,
+          stock: formData.track_stock ? stock : 0,
+          low_stock_threshold: threshold
+        });
       } else {
-        await createItem(formData.name, price);
+        await createItem(formData.name, price, formData.track_stock, stock, threshold);
       }
       closeModal();
       fetchItems();
