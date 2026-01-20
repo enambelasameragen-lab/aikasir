@@ -463,22 +463,14 @@ class AIKasirTester:
             self.test_subdomain_check,
         ]
         
-        # If login fails, try AI onboarding
+        # Run all tests in sequence
+        for test_func in tests:
+            test_func()
+        
+        # If login failed and we don't have token, try AI onboarding
         if not self.token:
             print("\n⚠️  Login failed, trying AI Onboarding...")
             self.test_ai_onboarding()
-            if self.token:
-                self.test_get_me()
-                self.test_items_crud()
-                self.test_transactions()
-                self.test_dashboard()
-                self.test_user_management_owner()
-                self.test_user_management_kasir()
-                self.test_subdomain_check()
-        else:
-            # Run remaining tests
-            for test_func in tests[2:]:  # Skip health and login since login worked
-                test_func()
         
         # Print summary
         print("\n" + "=" * 60)
