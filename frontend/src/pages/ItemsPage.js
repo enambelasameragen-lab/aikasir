@@ -210,6 +210,9 @@ const ItemsPage = () => {
                     Harga
                   </th>
                   <th className="text-center px-6 py-4 font-semibold text-gray-600">
+                    Stok
+                  </th>
+                  <th className="text-center px-6 py-4 font-semibold text-gray-600">
                     Status
                   </th>
                   <th className="text-center px-6 py-4 font-semibold text-gray-600">
@@ -218,52 +221,74 @@ const ItemsPage = () => {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item) => (
-                  <tr key={item.id} className="border-b hover:bg-gray-50" data-testid={`item-row-${item.id}`}>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center">
-                          <Package className="w-5 h-5 text-blue-500" />
+                {items.map((item) => {
+                  const isLowStock = item.track_stock && item.stock <= (item.low_stock_threshold || 10);
+                  const isOutOfStock = item.track_stock && item.stock === 0;
+                  
+                  return (
+                    <tr key={item.id} className="border-b hover:bg-gray-50" data-testid={`item-row-${item.id}`}>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-lg flex items-center justify-center">
+                            <Package className="w-5 h-5 text-blue-500" />
+                          </div>
+                          <span className="font-medium text-gray-900">
+                            {item.name}
+                          </span>
                         </div>
-                        <span className="font-medium text-gray-900">
-                          {item.name}
+                      </td>
+                      <td className="px-6 py-4 text-right font-semibold text-blue-600">
+                        {formatRupiah(item.price)}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        {item.track_stock ? (
+                          <div className="flex items-center justify-center gap-1">
+                            {isOutOfStock && <AlertTriangle className="w-4 h-4 text-red-500" />}
+                            {isLowStock && !isOutOfStock && <AlertTriangle className="w-4 h-4 text-yellow-500" />}
+                            <span className={`font-semibold ${
+                              isOutOfStock ? 'text-red-600' : 
+                              isLowStock ? 'text-yellow-600' : 
+                              'text-gray-900'
+                            }`}>
+                              {item.stock}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-gray-400 text-sm">-</span>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 text-center">
+                        <span
+                          className={`px-3 py-1 rounded-full text-xs font-medium ${
+                            item.is_active
+                              ? 'bg-green-100 text-green-700'
+                              : 'bg-red-100 text-red-700'
+                          }`}
+                        >
+                          {item.is_active ? 'Aktif' : 'Nonaktif'}
                         </span>
-                      </div>
-                    </td>
-                    <td className="px-6 py-4 text-right font-semibold text-blue-600">
-                      {formatRupiah(item.price)}
-                    </td>
-                    <td className="px-6 py-4 text-center">
-                      <span
-                        className={`px-3 py-1 rounded-full text-xs font-medium ${
-                          item.is_active
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
-                        }`}
-                      >
-                        {item.is_active ? 'Aktif' : 'Nonaktif'}
-                      </span>
-                    </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center justify-center gap-2">
-                        <button
-                          onClick={() => openEditModal(item)}
-                          className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
-                          data-testid={`edit-${item.id}`}
-                        >
-                          <Pencil className="w-4 h-4" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(item)}
-                          className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
-                          data-testid={`delete-${item.id}`}
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))}
+                      </td>
+                      <td className="px-6 py-4">
+                        <div className="flex items-center justify-center gap-2">
+                          <button
+                            onClick={() => openEditModal(item)}
+                            className="p-2 text-gray-500 hover:text-blue-600 hover:bg-blue-50 rounded-lg"
+                            data-testid={`edit-${item.id}`}
+                          >
+                            <Pencil className="w-4 h-4" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(item)}
+                            className="p-2 text-gray-500 hover:text-red-600 hover:bg-red-50 rounded-lg"
+                            data-testid={`delete-${item.id}`}
+                          >
+                            <Trash2 className="w-4 h-4" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </div>
