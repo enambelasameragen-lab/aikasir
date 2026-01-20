@@ -5,8 +5,8 @@
 |-------|--------|----------|-------|
 | Phase 1 | ✅ Complete | 100% | Bisa Jualan - Tested |
 | Phase 2 | ✅ Complete | 100% | Toko Sendiri - Tested |
-| Phase 3 | ⬜ Not Started | 0% | Cara Bayar & Laporan |
-| Phase 4 | ⬜ Not Started | 0% | Stok Barang |
+| Phase 3 | ✅ Complete | 100% | Cara Bayar & Laporan - Tested |
+| Phase 4 | 🔄 In Progress | 0% | Stok Barang |
 | Phase 5 | ⬜ Not Started | 0% | Pelanggan & Promo |
 | Phase 6 | ⬜ Not Started | 0% | Booking & Jadwal |
 
