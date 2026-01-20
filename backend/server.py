@@ -566,11 +566,16 @@ async def create_item(
         raise HTTPException(status_code=400, detail="Nama barang harus diisi")
     if data.price <= 0:
         raise HTTPException(status_code=400, detail="Harga harus lebih dari 0")
+    if data.stock < 0:
+        raise HTTPException(status_code=400, detail="Stok tidak boleh negatif")
     
     item = Item(
         tenant_id=current_user["tenant_id"],
         name=data.name,
-        price=data.price
+        price=data.price,
+        track_stock=data.track_stock,
+        stock=data.stock if data.track_stock else 0,
+        low_stock_threshold=data.low_stock_threshold
     )
     item_dict = item.model_dump()
     item_dict["created_at"] = item_dict["created_at"].isoformat()
