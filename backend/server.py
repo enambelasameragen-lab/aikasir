@@ -663,6 +663,9 @@ async def create_transaction(
     transaction_dict["created_at"] = transaction_dict["created_at"].isoformat()
     await db.transactions.insert_one(transaction_dict)
     
+    # Remove MongoDB _id before returning
+    transaction_dict.pop("_id", None)
+    
     # Get tenant for receipt
     tenant = await db.tenants.find_one({"id": current_user["tenant_id"]}, {"_id": 0})
     
