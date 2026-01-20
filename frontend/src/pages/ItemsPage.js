@@ -60,14 +60,26 @@ const ItemsPage = () => {
 
   const openAddModal = () => {
     setEditItem(null);
-    setFormData({ name: '', price: '' });
+    setFormData({ 
+      name: '', 
+      price: '', 
+      track_stock: false, 
+      stock: '',
+      low_stock_threshold: '10'
+    });
     setError('');
     setShowModal(true);
   };
 
   const openEditModal = (item) => {
     setEditItem(item);
-    setFormData({ name: item.name, price: item.price.toString() });
+    setFormData({ 
+      name: item.name, 
+      price: item.price.toString(),
+      track_stock: item.track_stock || false,
+      stock: item.stock?.toString() || '0',
+      low_stock_threshold: item.low_stock_threshold?.toString() || '10'
+    });
     setError('');
     setShowModal(true);
   };
@@ -75,7 +87,13 @@ const ItemsPage = () => {
   const closeModal = () => {
     setShowModal(false);
     setEditItem(null);
-    setFormData({ name: '', price: '' });
+    setFormData({ 
+      name: '', 
+      price: '', 
+      track_stock: false, 
+      stock: '',
+      low_stock_threshold: '10'
+    });
     setError('');
   };
 
