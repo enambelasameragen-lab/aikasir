@@ -9,6 +9,7 @@ import {
   BarChart3,
   Settings,
   LogOut,
+  Users,
 } from 'lucide-react';
 
 const Layout = ({ children }) => {
@@ -20,13 +21,20 @@ const Layout = ({ children }) => {
     navigate('/login');
   };
 
+  // Nav items - some only visible to owners
   const navItems = [
-    { to: '/pos', icon: LayoutGrid, label: 'Kasir' },
-    { to: '/items', icon: Package, label: 'Barang' },
-    { to: '/history', icon: Receipt, label: 'Riwayat' },
-    { to: '/dashboard', icon: BarChart3, label: 'Ringkasan' },
-    { to: '/settings', icon: Settings, label: 'Pengaturan' },
+    { to: '/pos', icon: LayoutGrid, label: 'Kasir', roles: ['pemilik', 'kasir'] },
+    { to: '/items', icon: Package, label: 'Barang', roles: ['pemilik', 'kasir'] },
+    { to: '/history', icon: Receipt, label: 'Riwayat', roles: ['pemilik', 'kasir'] },
+    { to: '/dashboard', icon: BarChart3, label: 'Ringkasan', roles: ['pemilik', 'kasir'] },
+    { to: '/users', icon: Users, label: 'Karyawan', roles: ['pemilik'] },
+    { to: '/settings', icon: Settings, label: 'Pengaturan', roles: ['pemilik'] },
   ];
+
+  // Filter nav items based on user role
+  const filteredNavItems = navItems.filter(
+    (item) => item.roles.includes(user?.role || 'kasir')
+  );
 
   return (
     <div className="h-screen flex bg-gray-50">
@@ -38,19 +46,21 @@ const Layout = ({ children }) => {
             <div className="w-10 h-10 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-xl flex items-center justify-center">
               <Store className="w-6 h-6 text-white" />
             </div>
-            <div>
+            <div className="min-w-0 flex-1">
               <h1 className="font-bold text-gray-900 truncate" data-testid="store-name">
                 {tenant?.name || 'AIKasir'}
               </h1>
-              <p className="text-xs text-gray-500">AIKasir</p>
+              <p className="text-xs text-gray-500 truncate">
+                {tenant?.subdomain ? `${tenant.subdomain}.aikasir.com` : 'AIKasir'}
+              </p>
             </div>
           </div>
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 p-4">
+        <nav className="flex-1 p-4 overflow-y-auto">
           <ul className="space-y-1">
-            {navItems.map((item) => (
+            {filteredNavItems.map((item) => (
               <li key={item.to}>
                 <NavLink
                   to={item.to}
@@ -74,16 +84,30 @@ const Layout = ({ children }) => {
         {/* User & Logout */}
         <div className="p-4 border-t">
           <div className="flex items-center gap-3 mb-3">
-            <div className="w-10 h-10 bg-gray-200 rounded-full flex items-center justify-center">
-              <span className="text-gray-600 font-medium">
-                {user?.name?.charAt(0) || 'U'}
+            <div className={`w-10 h-10 rounded-full flex items-center justify-center ${
+              user?.role === 'pemilik' 
+                ? 'bg-purple-100' 
+                : 'bg-blue-100'
+            }`}>
+              <span className={`font-semibold ${
+                user?.role === 'pemilik' 
+                  ? 'text-purple-600' 
+                  : 'text-blue-600'
+              }`}>
+                {user?.name?.charAt(0).toUpperCase() || 'U'}
               </span>
             </div>
             <div className="flex-1 min-w-0">
               <p className="font-medium text-gray-900 truncate" data-testid="user-name">
                 {user?.name || 'User'}
               </p>
-              <p className="text-xs text-gray-500 capitalize">{user?.role}</p>
+              <p className={`text-xs capitalize ${
+                user?.role === 'pemilik' 
+                  ? 'text-purple-500' 
+                  : 'text-blue-500'
+              }`}>
+                {user?.role}
+              </p>
             </div>
           </div>
           <button
