@@ -472,6 +472,9 @@ class AIKasirTester:
                 self.test_items_crud()
                 self.test_transactions()
                 self.test_dashboard()
+                self.test_user_management_owner()
+                self.test_user_management_kasir()
+                self.test_subdomain_check()
         else:
             # Run remaining tests
             for test_func in tests[2:]:  # Skip health and login since login worked
