@@ -67,15 +67,29 @@ export const getTransactions = (date = null, limit = 50, offset = 0) =>
 export const getTransaction = (id) =>
   api.get(`/transactions/${id}`);
 
-export const createTransaction = (items, paymentMethod, paymentAmount) =>
+export const createTransaction = (items, paymentMethod, paymentAmount, paymentReference = null) =>
   api.post('/transactions', {
     items,
     payment_method: paymentMethod,
     payment_amount: paymentAmount,
+    payment_reference: paymentReference,
   });
+
+export const voidTransaction = (id, reason) =>
+  api.post(`/transactions/${id}/void`, { reason });
 
 // Dashboard
 export const getDashboardToday = () => api.get('/dashboard/today');
+
+// Reports
+export const getReportSummary = (startDate, endDate) =>
+  api.get('/reports/summary', { params: { start_date: startDate, end_date: endDate } });
+
+export const getDailyReport = (date) =>
+  api.get('/reports/daily', { params: { date } });
+
+export const exportReport = (startDate, endDate, format = 'json') =>
+  api.get('/reports/export', { params: { start_date: startDate, end_date: endDate, format } });
 
 // Settings
 export const getSettings = () => api.get('/settings');
