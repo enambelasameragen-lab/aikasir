@@ -146,10 +146,16 @@ class Transaction(BaseModel):
     transaction_number: str
     items: List[TransactionItem]
     total: int
-    payment_method: str = "tunai"
+    discount_amount: int = 0
+    final_total: int = 0
+    payment_method: str = "tunai"  # tunai, qris, transfer
     payment_amount: int
     change_amount: int
-    status: str = "selesai"
+    payment_reference: Optional[str] = None  # Untuk QRIS/Transfer reference
+    status: str = "selesai"  # selesai, void
+    voided_at: Optional[str] = None
+    voided_by: Optional[str] = None
+    void_reason: Optional[str] = None
     created_by: str
     created_by_name: str
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
@@ -158,6 +164,10 @@ class TransactionCreate(BaseModel):
     items: List[Dict[str, Any]]  # [{"item_id": "...", "qty": 2}]
     payment_method: str = "tunai"
     payment_amount: int
+    payment_reference: Optional[str] = None
+
+class TransactionVoid(BaseModel):
+    reason: str
 
 # AI Onboarding Models
 class AIOnboardMessage(BaseModel):
